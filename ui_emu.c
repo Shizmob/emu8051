@@ -43,7 +43,7 @@
 #include "curses.h"
 #endif
 #include "emu8051.h"
-#include "emulator.h"
+#include "ui.h"
 
 unsigned char history[HISTORY_LINES * (128 + 64 + sizeof(int))];
 
@@ -175,38 +175,38 @@ int emu_sfrread(struct em8051 *aCPU, int aRegister)
 
     if (view == LOGICBOARD_VIEW)
     {
-        if (aRegister == REG_P0 + 0x80)
+        if (aRegister == EM8051_REG_P0 + 0x80)
         {
             outputbyte = p0out;
         }
-        if (aRegister == REG_P1 + 0x80)
+        if (aRegister == EM8051_REG_P1 + 0x80)
         {
             outputbyte =  p1out;
         }
-        if (aRegister == REG_P2 + 0x80)
+        if (aRegister == EM8051_REG_P2 + 0x80)
         {
             outputbyte =  p2out;
         }
-        if (aRegister == REG_P3 + 0x80)
+        if (aRegister == EM8051_REG_P3 + 0x80)
         {
             outputbyte =  p3out;
         }
     }
     else
     {
-        if (aRegister == REG_P0 + 0x80)
+        if (aRegister == EM8051_REG_P0 + 0x80)
         {
             outputbyte = p0out = emu_readvalue(aCPU, "P0 port read", p0out, 2);
         }
-        if (aRegister == REG_P1 + 0x80)
+        if (aRegister == EM8051_REG_P1 + 0x80)
         {
             outputbyte = p1out = emu_readvalue(aCPU, "P1 port read", p1out, 2);
         }
-        if (aRegister == REG_P2 + 0x80)
+        if (aRegister == EM8051_REG_P2 + 0x80)
         {
             outputbyte = p2out = emu_readvalue(aCPU, "P2 port read", p2out, 2);
         }
-        if (aRegister == REG_P3 + 0x80)
+        if (aRegister == EM8051_REG_P3 + 0x80)
         {
             outputbyte = p3out = emu_readvalue(aCPU, "P3 port read", p3out, 2);
         }
@@ -291,7 +291,7 @@ int main(int parc, char ** pars)
     emu.sfrread      = &emu_sfrread;
     emu.xread = NULL;
     emu.xwrite = NULL;
-    reset(&emu, 1);
+    em8051_reset(&emu, 1);
 
     if (parc > 1)
     {
@@ -408,7 +408,7 @@ int main(int parc, char ** pars)
             }
             else
             {
-                if (load_obj(&emu, pars[i]) != 0)
+                if (em8051_load_obj(&emu, pars[i]) != 0)
                 {
                     printf("File '%s' load failure\n\n",pars[i]);
                     return -1;
@@ -587,7 +587,7 @@ int main(int parc, char ** pars)
                     {
                         targetclocks--;
                         clocks += 12;
-                        ticked = tick(&emu);
+                        ticked = em8051_tick(&emu);
                         logicboard_tick(&emu);
                     }
                 }
@@ -595,7 +595,7 @@ int main(int parc, char ** pars)
                 {
                     targetclocks--;
                     clocks += 12;
-                    ticked = tick(&emu);
+                    ticked = em8051_tick(&emu);
                     logicboard_tick(&emu);
                 }
 

@@ -31,7 +31,7 @@
 #include <string.h>
 #include "curses.h"
 #include "emu8051.h"
-#include "emulator.h"
+#include "ui.h"
 
 static int activerow = 0;
 

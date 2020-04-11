@@ -28,15 +28,15 @@
  * These functions decode 8051 operations into text strings, useful in
  * interactive debugger.
  */
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "emu8051.h"
+
+#if !EM8051_MINIMAL
+#include <stdio.h>
+#include <string.h>
 
 //#define static
 
-void mem_memonic(int aValue, char *aBuffer)
+static void mem_memonic(int aValue, char *aBuffer)
 {
     int done = 0;
 
@@ -44,83 +44,83 @@ void mem_memonic(int aValue, char *aBuffer)
     {
         switch (aValue - 0x80)
         {
-        case REG_ACC:
+        case EM8051_REG_ACC:
             strcpy(aBuffer, "ACC"); 
             done = 1;
             break;
-        case REG_B:
+        case EM8051_REG_B:
             strcpy(aBuffer, "B");
             done = 1;
             break;
-        case REG_PSW:
+        case EM8051_REG_PSW:
             strcpy(aBuffer, "PSW");
             done = 1;
             break;
-        case REG_SP:
+        case EM8051_REG_SP:
             strcpy(aBuffer, "SP");
             done = 1;
             break;
-        case REG_DPL:
+        case EM8051_REG_DPL:
             strcpy(aBuffer, "DPL");
             done = 1;
             break;
-        case REG_DPH:
+        case EM8051_REG_DPH:
             strcpy(aBuffer, "DPH");
             done = 1;
             break;
-        case REG_P0:
+        case EM8051_REG_P0:
             strcpy(aBuffer, "P0");
             done = 1;
             break;
-        case REG_P1:
+        case EM8051_REG_P1:
             strcpy(aBuffer, "P1");
             done = 1;
             break;
-        case REG_P2:
+        case EM8051_REG_P2:
             strcpy(aBuffer, "P2");
             done = 1;
             break;
-        case REG_P3:
+        case EM8051_REG_P3:
             strcpy(aBuffer, "P3");
             done = 1;
             break;
-        case REG_IP:
+        case EM8051_REG_IP:
             strcpy(aBuffer, "IP");
             done = 1;
             break;
-        case REG_IE:
+        case EM8051_REG_IE:
             strcpy(aBuffer, "IE");
             done = 1;
             break;
-        case REG_TMOD:
+        case EM8051_REG_TMOD:
             strcpy(aBuffer, "TMOD");
             done = 1;
             break;
-        case REG_TCON:
+        case EM8051_REG_TCON:
             strcpy(aBuffer, "TCON");
             done = 1;
             break;
-        case REG_TH0:
+        case EM8051_REG_TH0:
             strcpy(aBuffer, "TH0");
             done = 1;
             break;
-        case REG_TL0:
+        case EM8051_REG_TL0:
             strcpy(aBuffer, "TL0");
             done = 1;
             break;
-        case REG_TH1:
+        case EM8051_REG_TH1:
             strcpy(aBuffer, "TH1");
             done = 1;
             break;
-        case REG_TL1:
+        case EM8051_REG_TL1:
             strcpy(aBuffer, "TL1");
             done = 1;
             break;
-        case REG_SCON:
+        case EM8051_REG_SCON:
             strcpy(aBuffer, "SCON");
             done = 1;
             break;
-        case REG_PCON:
+        case EM8051_REG_PCON:
             strcpy(aBuffer, "PCON");
             done = 1;
             break;
@@ -132,7 +132,7 @@ void mem_memonic(int aValue, char *aBuffer)
     }
 }
 
-void bitaddr_memonic(int aValue, char *aBuffer)
+static void bitaddr_memonic(int aValue, char *aBuffer)
 {
     char regname[16];
 
@@ -140,64 +140,64 @@ void bitaddr_memonic(int aValue, char *aBuffer)
     {
         switch ((aValue & 0xf8) - 0x80)
         {
-        case REG_ACC:
+        case EM8051_REG_ACC:
             strcpy(regname, "ACC"); 
             break;
-        case REG_B:
+        case EM8051_REG_B:
             strcpy(regname, "B");
             break;
-        case REG_PSW:
+        case EM8051_REG_PSW:
             strcpy(regname, "PSW");
             break;
-        case REG_SP:
+        case EM8051_REG_SP:
             strcpy(regname, "SP");
             break;
-        case REG_DPL:
+        case EM8051_REG_DPL:
             strcpy(regname, "DPL");
             break;
-        case REG_DPH:
+        case EM8051_REG_DPH:
             strcpy(regname, "DPH");
             break;
-        case REG_P0:
+        case EM8051_REG_P0:
             strcpy(regname, "P0");
             break;
-        case REG_P1:
+        case EM8051_REG_P1:
             strcpy(regname, "P1");
             break;
-        case REG_P2:
+        case EM8051_REG_P2:
             strcpy(regname, "P2");
             break;
-        case REG_P3:
+        case EM8051_REG_P3:
             strcpy(regname, "P3");
             break;
-        case REG_IP:
+        case EM8051_REG_IP:
             strcpy(regname, "IP");
             break;
-        case REG_IE:
+        case EM8051_REG_IE:
             strcpy(regname, "IE");
             break;
-        case REG_TMOD:
+        case EM8051_REG_TMOD:
             strcpy(regname, "TMOD");
             break;
-        case REG_TCON:
+        case EM8051_REG_TCON:
             strcpy(regname, "TCON");
             break;
-        case REG_TH0:
+        case EM8051_REG_TH0:
             strcpy(regname, "TH0");
             break;
-        case REG_TL0:
+        case EM8051_REG_TL0:
             strcpy(regname, "TL0");
             break;
-        case REG_TH1:
+        case EM8051_REG_TH1:
             strcpy(regname, "TH1");
             break;
-        case REG_TL1:
+        case EM8051_REG_TL1:
             strcpy(regname, "TL1");
             break;
-        case REG_SCON:
+        case EM8051_REG_SCON:
             strcpy(regname, "SCON");
             break;
-        case REG_PCON:
+        case EM8051_REG_PCON:
             strcpy(regname, "PCON");
             break;
         default:
@@ -1080,7 +1080,7 @@ static int disasm_mov_rx_a(struct em8051 *aCPU, int aPosition, char *aBuffer)
     return 1;
 }
 
-void disasm_setptrs(struct em8051 *aCPU)
+void em8051_disasm_setptrs(struct em8051 *aCPU)
 {
     int i;
     for (i = 0; i < 8; i++)
@@ -1246,3 +1246,4 @@ void disasm_setptrs(struct em8051 *aCPU)
     aCPU->dec[0xf6] = &disasm_mov_indir_rx_a;
     aCPU->dec[0xf7] = &disasm_mov_indir_rx_a;
 }
+#endif

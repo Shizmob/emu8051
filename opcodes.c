@@ -25,22 +25,18 @@
  * opcodes.c
  * 8051 opcode simulation functions
  */
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "emu8051.h"
 
 #define BAD_VALUE 0x77
-#define PSW aCPU->mSFR[REG_PSW]
-#define ACC aCPU->mSFR[REG_ACC]
+#define PSW aCPU->mSFR[EM8051_REG_PSW]
+#define ACC aCPU->mSFR[EM8051_REG_ACC]
 #define PC aCPU->mPC
 #define OPCODE aCPU->mCodeMem[(PC + 0)&(aCPU->mCodeMemSize-1)]
 #define OPERAND1 aCPU->mCodeMem[(PC + 1)&(aCPU->mCodeMemSize-1)]
 #define OPERAND2 aCPU->mCodeMem[(PC + 2)&(aCPU->mCodeMemSize-1)]
-#define INDIR_RX_ADDRESS (aCPU->mLowerData[(OPCODE & 1) + 8 * ((PSW & (PSWMASK_RS0|PSWMASK_RS1))>>PSW_RS0)])
-#define RX_ADDRESS ((OPCODE & 7) + 8 * ((PSW & (PSWMASK_RS0|PSWMASK_RS1))>>PSW_RS0))
-#define CARRY ((PSW & PSWMASK_C) >> PSW_C)
+#define INDIR_RX_ADDRESS (aCPU->mLowerData[(OPCODE & 1) + 8 * ((PSW & (EM8051_PSWMASK_RS0|EM8051_PSWMASK_RS1))>>EM8051_PSW_RS0)])
+#define RX_ADDRESS ((OPCODE & 7) + 8 * ((PSW & (EM8051_PSWMASK_RS0|EM8051_PSWMASK_RS1))>>EM8051_PSW_RS0))
+#define CARRY ((PSW & EM8051_PSWMASK_C) >> EM8051_PSW_C)
 
 static int read_mem(struct em8051 *aCPU, int aAddress)
 {
@@ -57,54 +53,54 @@ static int read_mem(struct em8051 *aCPU, int aAddress)
     }
 }
 
-void push_to_stack(struct em8051 *aCPU, int aValue)
+void em8051_push_to_stack(struct em8051 *aCPU, int aValue)
 {
-    aCPU->mSFR[REG_SP]++;
-    if (aCPU->mSFR[REG_SP] > 0x7f)
+    aCPU->mSFR[EM8051_REG_SP]++;
+    if (aCPU->mSFR[EM8051_REG_SP] > 0x7f)
     {
         if (aCPU->mUpperData)
         {
-            aCPU->mUpperData[aCPU->mSFR[REG_SP] - 0x80] = aValue;
+            aCPU->mUpperData[aCPU->mSFR[EM8051_REG_SP] - 0x80] = aValue;
         }
         else
         {
             if (aCPU->except)
-                aCPU->except(aCPU, EXCEPTION_STACK);
+                aCPU->except(aCPU, EM8051_EXCEPTION_STACK);
         }
     }
     else
     {
-        aCPU->mLowerData[aCPU->mSFR[REG_SP]] = aValue;
+        aCPU->mLowerData[aCPU->mSFR[EM8051_REG_SP]] = aValue;
     }
-    if (aCPU->mSFR[REG_SP] == 0)
+    if (aCPU->mSFR[EM8051_REG_SP] == 0)
         if (aCPU->except)
-            aCPU->except(aCPU, EXCEPTION_STACK);
+            aCPU->except(aCPU, EM8051_EXCEPTION_STACK);
 }
 
 static int pop_from_stack(struct em8051 *aCPU)
 {
     int value = BAD_VALUE;
-    if (aCPU->mSFR[REG_SP] > 0x7f)
+    if (aCPU->mSFR[EM8051_REG_SP] > 0x7f)
     {
         if (aCPU->mUpperData)
         {
-            value = aCPU->mUpperData[aCPU->mSFR[REG_SP] - 0x80];
+            value = aCPU->mUpperData[aCPU->mSFR[EM8051_REG_SP] - 0x80];
         }
         else
         {
             if (aCPU->except)
-                aCPU->except(aCPU, EXCEPTION_STACK);
+                aCPU->except(aCPU, EM8051_EXCEPTION_STACK);
         }
     }
     else
     {
-        value = aCPU->mLowerData[aCPU->mSFR[REG_SP]];
+        value = aCPU->mLowerData[aCPU->mSFR[EM8051_REG_SP]];
     }
-    aCPU->mSFR[REG_SP]--;
+    aCPU->mSFR[EM8051_REG_SP]--;
 
-    if (aCPU->mSFR[REG_SP] == 0xff)
+    if (aCPU->mSFR[EM8051_REG_SP] == 0xff)
         if (aCPU->except)
-            aCPU->except(aCPU, EXCEPTION_STACK);
+            aCPU->except(aCPU, EM8051_EXCEPTION_STACK);
     return value;
 }
 
@@ -120,8 +116,8 @@ static void add_solve_flags(struct em8051 * aCPU, int value1, int value2, int ac
     /* Overflow: overflow from 6th or 7th bit, but not both */
     int overflow = (((value1 & 127) + (value2 & 127) + acc) >> 7)^carry;
     
-    PSW = (PSW & ~(PSWMASK_C | PSWMASK_AC | PSWMASK_OV)) |
-          (carry << PSW_C) | (auxcarry << PSW_AC) | (overflow << PSW_OV);
+    PSW = (PSW & ~(EM8051_PSWMASK_C | EM8051_PSWMASK_AC | EM8051_PSWMASK_OV)) |
+          (carry << EM8051_PSW_C) | (auxcarry << EM8051_PSW_AC) | (overflow << EM8051_PSW_OV);
 }
 
 static void sub_solve_flags(struct em8051 * aCPU, int value1, int value2)
@@ -129,8 +125,8 @@ static void sub_solve_flags(struct em8051 * aCPU, int value1, int value2)
     int carry = (((value1 & 255) - (value2 & 255)) >> 8) & 1;
     int auxcarry = (((value1 & 7) - (value2 & 7)) >> 3) & 1;
     int overflow = ((((value1 & 127) - (value2 & 127)) >> 7) & 1)^carry;
-    PSW = (PSW & ~(PSWMASK_C|PSWMASK_AC|PSWMASK_OV)) |
-                          (carry << PSW_C) | (auxcarry << PSW_AC) | (overflow << PSW_OV);
+    PSW = (PSW & ~(EM8051_PSWMASK_C|EM8051_PSWMASK_AC|EM8051_PSWMASK_OV)) |
+                          (carry << EM8051_PSW_C) | (auxcarry << EM8051_PSW_AC) | (overflow << EM8051_PSW_OV);
 }
 
 
@@ -250,16 +246,16 @@ static int jbc_bitaddr_offset(struct em8051 *aCPU)
 static int acall_offset(struct em8051 *aCPU)
 {
     int address = (PC + 2) & 0xf800 | OPERAND1 | ((OPCODE & 0xe0) << 3);
-    push_to_stack(aCPU, (PC + 2) & 0xff);
-    push_to_stack(aCPU, (PC + 2) >> 8);
+    em8051_push_to_stack(aCPU, (PC + 2) & 0xff);
+    em8051_push_to_stack(aCPU, (PC + 2) >> 8);
     PC = address;
     return 1;
 }
 
 static int lcall_address(struct em8051 *aCPU)
 {
-    push_to_stack(aCPU, (PC + 3) & 0xff);
-    push_to_stack(aCPU, (PC + 3) >> 8);
+    em8051_push_to_stack(aCPU, (PC + 3) & 0xff);
+    em8051_push_to_stack(aCPU, (PC + 3) >> 8);
     PC = (aCPU->mCodeMem[(PC + 1) & (aCPU->mCodeMemSize-1)] << 8) | 
          (aCPU->mCodeMem[(PC + 2) & (aCPU->mCodeMemSize-1)] << 0);
     return 1;
@@ -267,10 +263,10 @@ static int lcall_address(struct em8051 *aCPU)
 
 static int rrc_a(struct em8051 *aCPU)
 {
-    int c = (PSW & PSWMASK_C) >> PSW_C;
+    int c = (PSW & EM8051_PSWMASK_C) >> EM8051_PSW_C;
     int newc = ACC & 1;
     ACC = (ACC >> 1) | (c << 7);
-    PSW = (PSW & ~PSWMASK_C) | (newc << PSW_C);
+    PSW = (PSW & ~EM8051_PSWMASK_C) | (newc << EM8051_PSW_C);
     PC++;
     return 0;
 }
@@ -464,13 +460,13 @@ static int reti(struct em8051 *aCPU)
             int hi = 0;
             if (aCPU->mInterruptActive > 1)
                 hi = 1;
-            if (aCPU->int_a[hi] != aCPU->mSFR[REG_ACC])
-                aCPU->except(aCPU, EXCEPTION_IRET_ACC_MISMATCH);
-            if (aCPU->int_sp[hi] != aCPU->mSFR[REG_SP])
-                aCPU->except(aCPU, EXCEPTION_IRET_SP_MISMATCH);    
-            if ((aCPU->int_psw[hi] & (PSWMASK_OV | PSWMASK_RS0 | PSWMASK_RS1 | PSWMASK_AC | PSWMASK_C)) !=                 
-                (aCPU->mSFR[REG_PSW] & (PSWMASK_OV | PSWMASK_RS0 | PSWMASK_RS1 | PSWMASK_AC | PSWMASK_C)))
-                aCPU->except(aCPU, EXCEPTION_IRET_PSW_MISMATCH);
+            if (aCPU->int_a[hi] != aCPU->mSFR[EM8051_REG_ACC])
+                aCPU->except(aCPU, EM8051_EXCEPTION_IRET_ACC_MISMATCH);
+            if (aCPU->int_sp[hi] != aCPU->mSFR[EM8051_REG_SP])
+                aCPU->except(aCPU, EM8051_EXCEPTION_IRET_SP_MISMATCH);    
+            if ((aCPU->int_psw[hi] & (EM8051_PSWMASK_OV | EM8051_PSWMASK_RS0 | EM8051_PSWMASK_RS1 | EM8051_PSWMASK_AC | EM8051_PSWMASK_C)) !=                 
+                (aCPU->mSFR[EM8051_REG_PSW] & (EM8051_PSWMASK_OV | EM8051_PSWMASK_RS0 | EM8051_PSWMASK_RS1 | EM8051_PSWMASK_AC | EM8051_PSWMASK_C)))
+                aCPU->except(aCPU, EM8051_EXCEPTION_IRET_PSW_MISMATCH);
         }
 
         if (aCPU->mInterruptActive & 2)
@@ -489,7 +485,7 @@ static int rlc_a(struct em8051 *aCPU)
     int c = CARRY;
     int newc = ACC >> 7;
     ACC = (ACC << 1) | c;
-    PSW = (PSW & ~PSWMASK_C) | (newc << PSW_C);
+    PSW = (PSW & ~EM8051_PSWMASK_C) | (newc << EM8051_PSW_C);
     PC++;
     return 0;
 }
@@ -540,7 +536,7 @@ static int addc_a_indir_rx(struct em8051 *aCPU)
 
 static int jc_offset(struct em8051 *aCPU)
 {
-    if (PSW & PSWMASK_C)
+    if (PSW & EM8051_PSWMASK_C)
     {
         PC += (signed char)OPERAND1 + 2;
     }
@@ -626,7 +622,7 @@ static int orl_a_indir_rx(struct em8051 *aCPU)
 
 static int jnc_offset(struct em8051 *aCPU)
 {
-    if (PSW & PSWMASK_C)
+    if (PSW & EM8051_PSWMASK_C)
     {
         PC += 2;
     }
@@ -822,7 +818,7 @@ static int orl_c_bitaddr(struct em8051 *aCPU)
 
         value = (value & bitmask) ? 1 : carry;
 
-        PSW = (PSW & ~PSWMASK_C) | (PSWMASK_C * value);
+        PSW = (PSW & ~EM8051_PSWMASK_C) | (EM8051_PSWMASK_C * value);
     }
     else
     {
@@ -832,7 +828,7 @@ static int orl_c_bitaddr(struct em8051 *aCPU)
         address >>= 3;
         address += 0x20;
         value = (aCPU->mLowerData[address] & bitmask) ? 1 : carry;
-        PSW = (PSW & ~PSWMASK_C) | (PSWMASK_C * value);
+        PSW = (PSW & ~EM8051_PSWMASK_C) | (EM8051_PSWMASK_C * value);
     }
     PC += 2;
     return 1;
@@ -840,7 +836,7 @@ static int orl_c_bitaddr(struct em8051 *aCPU)
 
 static int jmp_indir_a_dptr(struct em8051 *aCPU)
 {
-    PC = ((aCPU->mSFR[REG_DPH] << 8) | (aCPU->mSFR[REG_DPL])) + ACC;
+    PC = ((aCPU->mSFR[EM8051_REG_DPH] << 8) | (aCPU->mSFR[EM8051_REG_DPL])) + ACC;
     return 1;
 }
 
@@ -913,7 +909,7 @@ static int anl_c_bitaddr(struct em8051 *aCPU)
 
         value = (value & bitmask) ? carry : 0;
 
-        PSW = (PSW & ~PSWMASK_C) | (PSWMASK_C * value);
+        PSW = (PSW & ~EM8051_PSWMASK_C) | (EM8051_PSWMASK_C * value);
     }
     else
     {
@@ -923,7 +919,7 @@ static int anl_c_bitaddr(struct em8051 *aCPU)
         address >>= 3;
         address += 0x20;
         value = (aCPU->mLowerData[address] & bitmask) ? carry : 0;
-        PSW = (PSW & ~PSWMASK_C) | (PSWMASK_C * value);
+        PSW = (PSW & ~EM8051_PSWMASK_C) | (EM8051_PSWMASK_C * value);
     }
     PC += 2;
     return 0;
@@ -940,9 +936,9 @@ static int movc_a_indir_a_pc(struct em8051 *aCPU)
 static int div_ab(struct em8051 *aCPU)
 {
     int a = ACC;
-    int b = aCPU->mSFR[REG_B];
+    int b = aCPU->mSFR[EM8051_REG_B];
     int res;
-    PSW &= ~(PSWMASK_C|PSWMASK_OV);
+    PSW &= ~(EM8051_PSWMASK_C|EM8051_PSWMASK_OV);
     if (b)
     {
         res = a/b;
@@ -951,10 +947,10 @@ static int div_ab(struct em8051 *aCPU)
     }
     else
     {
-        PSW |= PSWMASK_OV;
+        PSW |= EM8051_PSWMASK_OV;
     }
     ACC = a;
-    aCPU->mSFR[REG_B] = b;
+    aCPU->mSFR[EM8051_REG_B] = b;
     PC++;
     return 3;
 }
@@ -1027,8 +1023,8 @@ static int mov_mem_indir_rx(struct em8051 *aCPU)
 
 static int mov_dptr_imm(struct em8051 *aCPU)
 {
-    aCPU->mSFR[REG_DPH] = OPERAND1;
-    aCPU->mSFR[REG_DPL] = OPERAND2;
+    aCPU->mSFR[EM8051_REG_DPH] = OPERAND1;
+    aCPU->mSFR[EM8051_REG_DPL] = OPERAND2;
     PC += 3;
     return 1;
 }
@@ -1062,7 +1058,7 @@ static int mov_bitaddr_c(struct em8051 *aCPU)
 
 static int movc_a_indir_a_dptr(struct em8051 *aCPU)
 {
-    int address = (aCPU->mSFR[REG_DPH] << 8) | (aCPU->mSFR[REG_DPL] << 0) + ACC;
+    int address = (aCPU->mSFR[EM8051_REG_DPH] << 8) | (aCPU->mSFR[EM8051_REG_DPL] << 0) + ACC;
     ACC = aCPU->mCodeMem[address & (aCPU->mCodeMemSize - 1)];
     PC++;
     return 1;
@@ -1129,7 +1125,7 @@ static int orl_c_compl_bitaddr(struct em8051 *aCPU)
 
         value = (value & bitmask) ? carry : 1;
 
-        PSW = (PSW & ~PSWMASK_C) | (PSWMASK_C * value);
+        PSW = (PSW & ~EM8051_PSWMASK_C) | (EM8051_PSWMASK_C * value);
     }
     else
     {
@@ -1139,7 +1135,7 @@ static int orl_c_compl_bitaddr(struct em8051 *aCPU)
         address >>= 3;
         address += 0x20;
         value = (aCPU->mLowerData[address] & bitmask) ? carry : 1;
-        PSW = (PSW & ~PSWMASK_C) | (PSWMASK_C * value);
+        PSW = (PSW & ~EM8051_PSWMASK_C) | (EM8051_PSWMASK_C * value);
     }
     PC += 2;
     return 0;
@@ -1162,7 +1158,7 @@ static int mov_c_bitaddr(struct em8051 *aCPU)
 
         value = (value & bitmask) ? 1 : 0;
 
-        PSW = (PSW & ~PSWMASK_C) | (PSWMASK_C * value);
+        PSW = (PSW & ~EM8051_PSWMASK_C) | (EM8051_PSWMASK_C * value);
     }
     else
     {
@@ -1172,7 +1168,7 @@ static int mov_c_bitaddr(struct em8051 *aCPU)
         address >>= 3;
         address += 0x20;
         value = (aCPU->mLowerData[address] & bitmask) ? 1 : 0;
-        PSW = (PSW & ~PSWMASK_C) | (PSWMASK_C * value);
+        PSW = (PSW & ~EM8051_PSWMASK_C) | (EM8051_PSWMASK_C * value);
     }
 
     PC += 2;
@@ -1181,9 +1177,9 @@ static int mov_c_bitaddr(struct em8051 *aCPU)
 
 static int inc_dptr(struct em8051 *aCPU)
 {
-    aCPU->mSFR[REG_DPL]++;
-    if (!aCPU->mSFR[REG_DPL])
-        aCPU->mSFR[REG_DPH]++;
+    aCPU->mSFR[EM8051_REG_DPL]++;
+    if (!aCPU->mSFR[EM8051_REG_DPL])
+        aCPU->mSFR[EM8051_REG_DPH]++;
     PC++;
     return 1;
 }
@@ -1191,13 +1187,13 @@ static int inc_dptr(struct em8051 *aCPU)
 static int mul_ab(struct em8051 *aCPU)
 {
     int a = ACC;
-    int b = aCPU->mSFR[REG_B];
+    int b = aCPU->mSFR[EM8051_REG_B];
     int res = a*b;
     ACC = res & 0xff;
-    aCPU->mSFR[REG_B] = res >> 8;
-    PSW &= ~(PSWMASK_C|PSWMASK_OV);
-    if (aCPU->mSFR[REG_B])
-        PSW |= PSWMASK_OV;
+    aCPU->mSFR[EM8051_REG_B] = res >> 8;
+    PSW &= ~(EM8051_PSWMASK_C|EM8051_PSWMASK_OV);
+    if (aCPU->mSFR[EM8051_REG_B])
+        PSW |= EM8051_PSWMASK_OV;
     PC++;
     return 3;
 }
@@ -1239,7 +1235,7 @@ static int anl_c_compl_bitaddr(struct em8051 *aCPU)
 
         value = (value & bitmask) ? 0 : carry;
 
-        PSW = (PSW & ~PSWMASK_C) | (PSWMASK_C * value);
+        PSW = (PSW & ~EM8051_PSWMASK_C) | (EM8051_PSWMASK_C * value);
     }
     else
     {
@@ -1249,7 +1245,7 @@ static int anl_c_compl_bitaddr(struct em8051 *aCPU)
         address >>= 3;
         address += 0x20;
         value = (aCPU->mLowerData[address] & bitmask) ? 0 : carry;
-        PSW = (PSW & ~PSWMASK_C) | (PSWMASK_C * value);
+        PSW = (PSW & ~EM8051_PSWMASK_C) | (EM8051_PSWMASK_C * value);
     }
     PC += 2;
     return 0;
@@ -1284,7 +1280,7 @@ static int cpl_bitaddr(struct em8051 *aCPU)
 
 static int cpl_c(struct em8051 *aCPU)
 {
-    PSW ^= PSWMASK_C;
+    PSW ^= EM8051_PSWMASK_C;
     PC++;
     return 0;
 }
@@ -1295,11 +1291,11 @@ static int cjne_a_imm_offset(struct em8051 *aCPU)
 
     if (ACC < value)
     {
-        PSW |= PSWMASK_C;
+        PSW |= EM8051_PSWMASK_C;
     }
     else
     {
-        PSW &= ~PSWMASK_C;
+        PSW &= ~EM8051_PSWMASK_C;
     }
 
     if (ACC != value)
@@ -1331,11 +1327,11 @@ static int cjne_a_mem_offset(struct em8051 *aCPU)
 
     if (ACC < value)
     {
-        PSW |= PSWMASK_C;
+        PSW |= EM8051_PSWMASK_C;
     }
     else
     {
-        PSW &= ~PSWMASK_C;
+        PSW &= ~EM8051_PSWMASK_C;
     }
 
     if (ACC != value)
@@ -1367,11 +1363,11 @@ static int cjne_indir_rx_imm_offset(struct em8051 *aCPU)
 
     if (value1 < value2)
     {
-        PSW |= PSWMASK_C;
+        PSW |= EM8051_PSWMASK_C;
     }
     else
     {
-        PSW &= ~PSWMASK_C;
+        PSW &= ~EM8051_PSWMASK_C;
     }
 
     if (value1 != value2)
@@ -1388,7 +1384,7 @@ static int cjne_indir_rx_imm_offset(struct em8051 *aCPU)
 static int push_mem(struct em8051 *aCPU)
 {
     int value = read_mem(aCPU, OPERAND1);
-    push_to_stack(aCPU, value);   
+    em8051_push_to_stack(aCPU, value);   
     PC += 2;
     return 1;
 }
@@ -1422,7 +1418,7 @@ static int clr_bitaddr(struct em8051 *aCPU)
 
 static int clr_c(struct em8051 *aCPU)
 {
-    PSW &= ~PSWMASK_C;
+    PSW &= ~EM8051_PSWMASK_C;
     PC++;
     return 0;
 }
@@ -1524,7 +1520,7 @@ static int setb_bitaddr(struct em8051 *aCPU)
 
 static int setb_c(struct em8051 *aCPU)
 {
-    PSW |= PSWMASK_C;
+    PSW |= EM8051_PSWMASK_C;
     PC++;
     return 0;
 }
@@ -1536,25 +1532,25 @@ static int da_a(struct em8051 *aCPU)
     // - should this be done in two steps?
 
     int result = ACC;
-    if ((result & 0xf) > 9 || (PSW & PSWMASK_AC))
+    if ((result & 0xf) > 9 || (PSW & EM8051_PSWMASK_AC))
         result += 0x6;
-    if ((result & 0xff0) > 0x90 || (PSW & PSWMASK_C))
+    if ((result & 0xff0) > 0x90 || (PSW & EM8051_PSWMASK_C))
         result += 0x60;
     if (result > 0x99)
-        PSW |= PSWMASK_C;
+        PSW |= EM8051_PSWMASK_C;
     ACC = result;
 
  /*
     // this is basically what intel datasheet says the op should do..
     int adder = 0;
-    if (ACC & 0xf > 9 || PSW & PSWMASK_AC)
+    if (ACC & 0xf > 9 || PSW & EM8051_PSWMASK_AC)
         adder = 6;
-    if (ACC & 0xf0 > 0x90 || PSW & PSWMASK_C)
+    if (ACC & 0xf0 > 0x90 || PSW & EM8051_PSWMASK_C)
         adder |= 0x60;
-    adder += aCPU[REG_ACC];
+    adder += aCPU[EM8051_REG_ACC];
     if (adder > 0x99)
-        PSW |= PSWMASK_C;
-    aCPU[REG_ACC] = adder;
+        PSW |= EM8051_PSWMASK_C;
+    aCPU[EM8051_REG_ACC] = adder;
 */
     PC++;
     return 0;
@@ -1613,7 +1609,7 @@ static int xchd_a_indir_rx(struct em8051 *aCPU)
 
 static int movx_a_indir_dptr(struct em8051 *aCPU)
 {
-    int dptr = (aCPU->mSFR[REG_DPH] << 8) | aCPU->mSFR[REG_DPL];
+    int dptr = (aCPU->mSFR[EM8051_REG_DPH] << 8) | aCPU->mSFR[EM8051_REG_DPL];
     if (aCPU->xread)
     {
         ACC = aCPU->xread(aCPU, dptr);
@@ -1656,9 +1652,9 @@ static int mov_a_mem(struct em8051 *aCPU)
     // mov a,acc is not a valid instruction
     int address = OPERAND1;
     int value = read_mem(aCPU, address);
-    if (REG_ACC == address - 0x80)
+    if (EM8051_REG_ACC == address - 0x80)
         if (aCPU->except)
-            aCPU->except(aCPU, EXCEPTION_ACC_TO_A);
+            aCPU->except(aCPU, EM8051_EXCEPTION_ACC_TO_A);
     ACC = value;
 
     PC += 2;
@@ -1690,7 +1686,7 @@ static int mov_a_indir_rx(struct em8051 *aCPU)
 
 static int movx_indir_dptr_a(struct em8051 *aCPU)
 {
-    int dptr = (aCPU->mSFR[REG_DPH] << 8) | aCPU->mSFR[REG_DPL];
+    int dptr = (aCPU->mSFR[EM8051_REG_DPH] << 8) | aCPU->mSFR[EM8051_REG_DPL];
     if (aCPU->xwrite)
     {
         aCPU->xwrite(aCPU, dptr, ACC);
@@ -1768,7 +1764,7 @@ static int nop(struct em8051 *aCPU)
 {
     if (aCPU->mCodeMem[PC & (aCPU->mCodeMemSize - 1)] != 0)
         if (aCPU->except)
-            aCPU->except(aCPU, EXCEPTION_ILLEGAL_OPCODE);
+            aCPU->except(aCPU, EM8051_EXCEPTION_ILLEGAL_OPCODE);
     PC++;
     return 0;
 }
@@ -1886,11 +1882,11 @@ static int cjne_rx_imm_offset(struct em8051 *aCPU)
     
     if (aCPU->mLowerData[rx] < value)
     {
-        PSW |= PSWMASK_C;
+        PSW |= EM8051_PSWMASK_C;
     }
     else
     {
-        PSW &= ~PSWMASK_C;
+        PSW &= ~EM8051_PSWMASK_C;
     }
 
     if (aCPU->mLowerData[rx] != value)
@@ -1946,7 +1942,7 @@ static int mov_rx_a(struct em8051 *aCPU)
     return 0;
 }
 
-void op_setptrs(struct em8051 *aCPU)
+void em8051_op_setptrs(struct em8051 *aCPU)
 {
     int i;
     for (i = 0; i < 8; i++)
@@ -2113,7 +2109,7 @@ void op_setptrs(struct em8051 *aCPU)
     aCPU->op[0xf7] = &mov_indir_rx_a;
 }
 
-int do_op(struct em8051 *aCPU)
+int em8051_do_op(struct em8051 *aCPU)
 {
     switch (OPCODE)
     {

@@ -134,25 +134,25 @@
 			Filter="cpp;c;cxx;def;odl;idl;hpj;bat;asm;asmx"
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}">
 			<File
-				RelativePath=".\emu.c">
+				RelativePath=".\ui_emu.c">
 			</File>
 			<File
-				RelativePath=".\emulator.h">
+				RelativePath=".\ui.h">
 			</File>
 			<File
-				RelativePath=".\logicboard.c">
+				RelativePath=".\ui_logicboard.c">
 			</File>
 			<File
-				RelativePath=".\mainview.c">
+				RelativePath=".\ui_mainview.c">
 			</File>
 			<File
-				RelativePath=".\memeditor.c">
+				RelativePath=".\ui_memeditor.c">
 			</File>
 			<File
-				RelativePath=".\options.c">
+				RelativePath=".\ui_options.c">
 			</File>
 			<File
-				RelativePath=".\popups.c">
+				RelativePath=".\ui_popups.c">
 			</File>
 			<Filter
 				Name="core"

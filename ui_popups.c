@@ -31,7 +31,7 @@
 #include <string.h>
 #include "curses.h"
 #include "emu8051.h"
-#include "emulator.h"
+#include "ui.h"
 
 // store the object filename (Accessed through command line as well)
 char filename[256];
@@ -75,22 +75,22 @@ void emu_exception(struct em8051 *aCPU, int aCode)
 
     switch (aCode)
     {
-    case EXCEPTION_IRET_SP_MISMATCH:
+    case EM8051_EXCEPTION_IRET_SP_MISMATCH:
         if (opt_exception_iret_sp) return;
         break;
-    case EXCEPTION_IRET_ACC_MISMATCH:
+    case EM8051_EXCEPTION_IRET_ACC_MISMATCH:
         if (opt_exception_iret_acc) return;
         break;
-    case EXCEPTION_IRET_PSW_MISMATCH:
+    case EM8051_EXCEPTION_IRET_PSW_MISMATCH:
         if (opt_exception_iret_psw) return;
         break;
-    case EXCEPTION_ACC_TO_A:
+    case EM8051_EXCEPTION_ACC_TO_A:
         if (!opt_exception_acc_to_a) return;
         break;
-    case EXCEPTION_STACK:
+    case EM8051_EXCEPTION_STACK:
         if (!opt_exception_stack) return;
         break;
-    case EXCEPTION_ILLEGAL_OPCODE:
+    case EM8051_EXCEPTION_ILLEGAL_OPCODE:
         if (!opt_exception_invalid) return;
         break;
     }
@@ -116,19 +116,19 @@ void emu_exception(struct em8051 *aCPU, int aCode)
     {
     case -1: waddstr(exc,"Breakpoint reached");
              break;
-    case EXCEPTION_STACK: waddstr(exc,"SP exception: stack address > 127");
+    case EM8051_EXCEPTION_STACK: waddstr(exc,"SP exception: stack address > 127");
                           wmove(exc, 3, 2);
                           waddstr(exc,"with no upper memory, or SP roll over."); 
                           break;
-    case EXCEPTION_ACC_TO_A: waddstr(exc,"Invalid operation: acc-to-a move operation"); 
+    case EM8051_EXCEPTION_ACC_TO_A: waddstr(exc,"Invalid operation: acc-to-a move operation"); 
                              break;
-    case EXCEPTION_IRET_PSW_MISMATCH: waddstr(exc,"PSW not preserved over interrupt call"); 
+    case EM8051_EXCEPTION_IRET_PSW_MISMATCH: waddstr(exc,"PSW not preserved over interrupt call"); 
                                       break;
-    case EXCEPTION_IRET_SP_MISMATCH: waddstr(exc,"SP not preserved over interrupt call"); 
+    case EM8051_EXCEPTION_IRET_SP_MISMATCH: waddstr(exc,"SP not preserved over interrupt call"); 
                                      break;
-    case EXCEPTION_IRET_ACC_MISMATCH: waddstr(exc,"ACC not preserved over interrupt call"); 
+    case EM8051_EXCEPTION_IRET_ACC_MISMATCH: waddstr(exc,"ACC not preserved over interrupt call"); 
                                      break;
-    case EXCEPTION_ILLEGAL_OPCODE: waddstr(exc,"Invalid opcode: 0xA5 encountered"); 
+    case EM8051_EXCEPTION_ILLEGAL_OPCODE: waddstr(exc,"Invalid opcode: 0xA5 encountered"); 
                                    break;
     default:
         waddstr(exc,"Unknown exception"); 
@@ -196,7 +196,7 @@ void emu_load(struct em8051 *aCPU)
         }
     }
 
-    result = load_obj(aCPU, filename);
+    result = em8051_load_obj(aCPU, filename);
     delwin(exc);
     refreshview(aCPU);
 
@@ -276,7 +276,7 @@ int emu_readvalue(struct em8051 *aCPU, const char *aPrompt, int aOldvalue, int a
         {
             int currvalue = strtol(temp, NULL, 16);
             char assembly[64];
-            decode(aCPU, currvalue, assembly);
+            em8051_decode(aCPU, currvalue, assembly);
             wmove(exc,2,5 + aValueSize);
             waddstr(exc, "                                        ");
             wmove(exc,2,5 + aValueSize);
@@ -408,12 +408,12 @@ int emu_reset(struct em8051 *aCPU)
         break;
     case 'r':
     case 'R':
-        reset(aCPU, 0);
+        em8051_reset(aCPU, 0);
         result = 1;
         break;
     case 'w':
     case 'W':
-        reset(aCPU, 1);
+        em8051_reset(aCPU, 1);
         result = 1;
         break;
     }

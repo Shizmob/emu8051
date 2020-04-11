@@ -31,7 +31,7 @@
 #include <string.h>
 #include "curses.h"
 #include "emu8051.h"
-#include "emulator.h"
+#include "ui.h"
 
 /*
     The history-based display assumes that there's no
@@ -202,11 +202,11 @@ void build_main_view(struct em8051 *aCPU)
 
 int getregoutput(struct em8051 *aCPU, int pos)
 {
-    int rx = 8 * ((aCPU->mSFR[REG_PSW] & (PSWMASK_RS0|PSWMASK_RS1))>>PSW_RS0);
+    int rx = 8 * ((aCPU->mSFR[EM8051_REG_PSW] & (EM8051_PSWMASK_RS0|EM8051_PSWMASK_RS1))>>EM8051_PSW_RS0);
     switch (pos)
     {
     case 0:
-        return aCPU->mSFR[REG_ACC];
+        return aCPU->mSFR[EM8051_REG_ACC];
     case 1:
         return aCPU->mLowerData[rx + 0];
     case 2:
@@ -224,20 +224,20 @@ int getregoutput(struct em8051 *aCPU, int pos)
     case 8:
         return aCPU->mLowerData[rx + 7];
     case 9:
-        return aCPU->mSFR[REG_B];
+        return aCPU->mSFR[EM8051_REG_B];
     case 10:
-        return aCPU->mSFR[REG_DPH] << 8 | aCPU->mSFR[REG_DPL];
+        return aCPU->mSFR[EM8051_REG_DPH] << 8 | aCPU->mSFR[EM8051_REG_DPL];
     }
     return 0;
 }
 
 void setregoutput(struct em8051 *aCPU, int pos, int val)
 {
-    int rx = 8 * ((aCPU->mSFR[REG_PSW] & (PSWMASK_RS0|PSWMASK_RS1))>>PSW_RS0);
+    int rx = 8 * ((aCPU->mSFR[EM8051_REG_PSW] & (EM8051_PSWMASK_RS0|EM8051_PSWMASK_RS1))>>EM8051_PSW_RS0);
     switch (pos)
     {
     case 0:
-        aCPU->mSFR[REG_ACC] = val;
+        aCPU->mSFR[EM8051_REG_ACC] = val;
         break;
     case 1:
         aCPU->mLowerData[rx + 0] = val;
@@ -264,11 +264,11 @@ void setregoutput(struct em8051 *aCPU, int pos, int val)
         aCPU->mLowerData[rx + 7] = val;
         break;
     case 9:
-        aCPU->mSFR[REG_B] = val;
+        aCPU->mSFR[EM8051_REG_B] = val;
         break;
     case 10:
-        aCPU->mSFR[REG_DPH] = (val >> 8) & 0xff;
-        aCPU->mSFR[REG_DPL] = val & 0xff;
+        aCPU->mSFR[EM8051_REG_DPH] = (val >> 8) & 0xff;
+        aCPU->mSFR[EM8051_REG_DPL] = val & 0xff;
         break;
     }
 }
@@ -461,10 +461,10 @@ void mainview_editor_keys(struct em8051 *aCPU, int ch)
 
 void refresh_regoutput(struct em8051 *aCPU, int cursor)
 {
-    int rx = 8 * ((aCPU->mSFR[REG_PSW] & (PSWMASK_RS0|PSWMASK_RS1))>>PSW_RS0);
+    int rx = 8 * ((aCPU->mSFR[EM8051_REG_PSW] & (EM8051_PSWMASK_RS0|EM8051_PSWMASK_RS1))>>EM8051_PSW_RS0);
     
     mvwprintw(regoutput, LINES-19, 0, "%02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %04X",
-        aCPU->mSFR[REG_ACC],
+        aCPU->mSFR[EM8051_REG_ACC],
         aCPU->mLowerData[0 + rx],
         aCPU->mLowerData[1 + rx],
         aCPU->mLowerData[2 + rx],
@@ -473,8 +473,8 @@ void refresh_regoutput(struct em8051 *aCPU, int cursor)
         aCPU->mLowerData[5 + rx],
         aCPU->mLowerData[6 + rx],
         aCPU->mLowerData[7 + rx],
-        aCPU->mSFR[REG_B],
-        (aCPU->mSFR[REG_DPH]<<8)|aCPU->mSFR[REG_DPL]);
+        aCPU->mSFR[EM8051_REG_B],
+        (aCPU->mSFR[EM8051_REG_DPH]<<8)|aCPU->mSFR[EM8051_REG_DPL]);
 
     if (focus == 1 && cursor)
     {   
@@ -521,7 +521,7 @@ void mainview_update(struct em8051 *aCPU)
             hoffs = (hline * (128 + 64 + sizeof(int)));
 
             memcpy(&old_pc, history + hoffs + 128 + 64, sizeof(int));
-            opcode_bytes = decode(aCPU, old_pc, assembly);
+            opcode_bytes = em8051_decode(aCPU, old_pc, assembly);
             stringpos = 0;
             stringpos += sprintf(temp + stringpos,"\n%04X  ", old_pc & 0xffff);
             
@@ -535,10 +535,10 @@ void mainview_update(struct em8051 *aCPU)
 
             wprintw(codeoutput, "%s", temp);
 
-            rx = 8 * ((history[hoffs + REG_PSW] & (PSWMASK_RS0|PSWMASK_RS1))>>PSW_RS0);
+            rx = 8 * ((history[hoffs + EM8051_REG_PSW] & (EM8051_PSWMASK_RS0|EM8051_PSWMASK_RS1))>>EM8051_PSW_RS0);
             
             sprintf(temp, "\n%02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %04X",
-                history[hoffs + REG_ACC],
+                history[hoffs + EM8051_REG_ACC],
                 history[hoffs + 128 + 0 + rx],
                 history[hoffs + 128 + 1 + rx],
                 history[hoffs + 128 + 2 + rx],
@@ -547,42 +547,42 @@ void mainview_update(struct em8051 *aCPU)
                 history[hoffs + 128 + 5 + rx],
                 history[hoffs + 128 + 6 + rx],
                 history[hoffs + 128 + 7 + rx],
-                history[hoffs + REG_B],
-                (history[hoffs + REG_DPH]<<8)|history[hoffs + REG_DPL]);
+                history[hoffs + EM8051_REG_B],
+                (history[hoffs + EM8051_REG_DPH]<<8)|history[hoffs + EM8051_REG_DPL]);
             if (focus == 1)
                 refresh_regoutput(aCPU, 0);
             wprintw(regoutput,"%s",temp);
 
             sprintf(temp, "\n%d %d %d %d %d %d %d %d",
-                (history[hoffs + REG_PSW] >> 7) & 1,
-                (history[hoffs + REG_PSW] >> 6) & 1,
-                (history[hoffs + REG_PSW] >> 5) & 1,
-                (history[hoffs + REG_PSW] >> 4) & 1,
-                (history[hoffs + REG_PSW] >> 3) & 1,
-                (history[hoffs + REG_PSW] >> 2) & 1,
-                (history[hoffs + REG_PSW] >> 1) & 1,
-                (history[hoffs + REG_PSW] >> 0) & 1);
+                (history[hoffs + EM8051_REG_PSW] >> 7) & 1,
+                (history[hoffs + EM8051_REG_PSW] >> 6) & 1,
+                (history[hoffs + EM8051_REG_PSW] >> 5) & 1,
+                (history[hoffs + EM8051_REG_PSW] >> 4) & 1,
+                (history[hoffs + EM8051_REG_PSW] >> 3) & 1,
+                (history[hoffs + EM8051_REG_PSW] >> 2) & 1,
+                (history[hoffs + EM8051_REG_PSW] >> 1) & 1,
+                (history[hoffs + EM8051_REG_PSW] >> 0) & 1);
             wprintw(pswoutput,"%s",temp);
 
             sprintf(temp, "\n%02X %02X %02X %02X %02X %02X %02X",
-                history[hoffs + REG_SP],
-                history[hoffs + REG_P0],
-                history[hoffs + REG_P1],
-                history[hoffs + REG_P2],
-                history[hoffs + REG_P3],
-                history[hoffs + REG_IP],
-                history[hoffs + REG_IE]);
+                history[hoffs + EM8051_REG_SP],
+                history[hoffs + EM8051_REG_P0],
+                history[hoffs + EM8051_REG_P1],
+                history[hoffs + EM8051_REG_P2],
+                history[hoffs + EM8051_REG_P3],
+                history[hoffs + EM8051_REG_IP],
+                history[hoffs + EM8051_REG_IE]);
             wprintw(ioregoutput,"%s",temp);
 
             sprintf(temp, "\n%02X   %02X    %02X  %02X   %02X  %02X   %02X   %02X",
-                history[hoffs + REG_TMOD],
-                history[hoffs + REG_TCON],
-                history[hoffs + REG_TH0],
-                history[hoffs + REG_TL0],
-                history[hoffs + REG_TH1],
-                history[hoffs + REG_TL1],
-                history[hoffs + REG_SCON],
-                history[hoffs + REG_PCON]);
+                history[hoffs + EM8051_REG_TMOD],
+                history[hoffs + EM8051_REG_TCON],
+                history[hoffs + EM8051_REG_TH0],
+                history[hoffs + EM8051_REG_TL0],
+                history[hoffs + EM8051_REG_TH1],
+                history[hoffs + EM8051_REG_TL1],
+                history[hoffs + EM8051_REG_SCON],
+                history[hoffs + EM8051_REG_PCON]);
             wprintw(spregoutput, "%s", temp);
 
             lastclock++;
@@ -652,7 +652,7 @@ void mainview_update(struct em8051 *aCPU)
 
     for (i = 0; i < 14; i++)
     {
-		int offset = (i + aCPU->mSFR[REG_SP]-7)&0xff;
+		int offset = (i + aCPU->mSFR[EM8051_REG_SP]-7)&0xff;
 		if (offset < 0x80)
 			wprintw(stackview," %02X\n", aCPU->mLowerData[offset]);
 		else
